@@ -12,39 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runner
+// Package storageutils provides utility functions for the service.
+package storageutils
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	confpb "github.com/sentinez/sentinez/api/gen/go/sentinez/types/conf/v1"
-	"github.com/sentinez/shared/zlog"
-	"go.uber.org/fx"
-	"google.golang.org/grpc/grpclog"
 )
 
-func NewApp[T any](appConf *confpb.Config, scopeName string) *App[T] {
-	logging := zlog.NewConsole(scopeName, zlog.LevelError)
-	grpclog.SetLoggerV2(logging)
-
-	level := zlog.ToLevel(appConf.GetFlag().GetLogLevel())
-	zlog.SetScopeLogLevel(scopeName, level)
-	ctx := NewContext[T](appConf)
-
-	return &App[T]{
-		ctx: ctx,
-	}
+// NewPgxPool create new pool connection for multiple query
+func NewPgxPool(conf *confpb.EnvConfig) (*pgxpool.Pool, error) {
+	return pgxpool.New(context.Background(), conf.GetPostgresUri())
 }
 
-type App[T any] struct {
-	ctx *Context[T]
-}
+// NewPgxConn create new connection for single query
+func NewPgxConn(
+	ctx context.Context, conf *confpb.EnvConfig) (*pgx.Conn, error) {
 
-func (a *App[T]) Main(main func(*Context[T])) {
-	main(a.ctx)
+	_ = conf
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		"conf.DbUser",
+		"conf.DbPassword",
+		"conf.DbHost",
+		"conf.DbPort",
+		"conf.DbName",
+	)
 
-	ctn := container{engine: fx.New(a.ctx.opts...)}
-	if err := ctn.Run(context.Background()); err != nil {
-		zlog.Fatal(err)
-	}
+	return pgx.Connect(ctx, dsn)
 }

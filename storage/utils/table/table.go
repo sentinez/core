@@ -12,39 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runner
+package table
 
 import (
-	"context"
+	"fmt"
+	"regexp"
+	"strings"
 
+	"github.com/sentinez/core"
 	confpb "github.com/sentinez/sentinez/api/gen/go/sentinez/types/conf/v1"
-	"github.com/sentinez/shared/zlog"
-	"go.uber.org/fx"
-	"google.golang.org/grpc/grpclog"
 )
 
-func NewApp[T any](appConf *confpb.Config, scopeName string) *App[T] {
-	logging := zlog.NewConsole(scopeName, zlog.LevelError)
-	grpclog.SetLoggerV2(logging)
-
-	level := zlog.ToLevel(appConf.GetFlag().GetLogLevel())
-	zlog.SetScopeLogLevel(scopeName, level)
-	ctx := NewContext[T](appConf)
-
-	return &App[T]{
-		ctx: ctx,
-	}
+func NewTable(appConf *confpb.Config, tableName string) string {
+	tableName = fmt.Sprintf("%s.%s.%s",
+		appConf.GetFlag().GetEnvMode(), core.BaseName, tableName)
+	return strings.ReplaceAll(tableName, ".", "_")
 }
 
-type App[T any] struct {
-	ctx *Context[T]
+func NewPrimaryKey(tableName string) string {
+	return fmt.Sprintf("%s.%s.", strings.ToLower(core.Code), tableName)
 }
 
-func (a *App[T]) Main(main func(*Context[T])) {
-	main(a.ctx)
-
-	ctn := container{engine: fx.New(a.ctx.opts...)}
-	if err := ctn.Run(context.Background()); err != nil {
-		zlog.Fatal(err)
+func IsValidTableName(tableName string) bool {
+	matched, err := regexp.MatchString(core.EnvPattern, tableName)
+	if err != nil {
+		fmt.Println("Regex error:", err)
+		return false
 	}
+
+	if matched {
+		return true
+	}
+
+	return false
 }
