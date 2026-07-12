@@ -12,35 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package corerule
+package coregrpc
 
 import (
-	"regexp"
-	"sync"
+	typepb "github.com/sentinez/sentinez/api/gen/go/sentinez/types/v1"
+	"google.golang.org/grpc"
 )
 
-var (
-	regexCache sync.Map
-)
+type Option struct {
+	meta    *typepb.XMeta
+	consul  bool
+	grpcOpt []grpc.ServerOption
+}
 
-func matchRegex(pattern string, value []byte) bool {
-	if pattern == "" {
-		return false
+type ServerOption func(*Option)
+
+func WithXMeta(meta *typepb.XMeta) ServerOption {
+	return func(so *Option) {
+		so.meta = meta
 	}
+}
 
-	// Try to get from cache
-	if v, ok := regexCache.Load(pattern); ok {
-		if re, ok := v.(*regexp.Regexp); ok {
-			return re.Match(value)
-		}
+func WithDiscorvery(enable bool) ServerOption {
+	return func(o *Option) {
+		o.consul = enable
 	}
+}
 
-	// Compile and cache
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		return false
+func WithGRPCServerOption(opts ...grpc.ServerOption) ServerOption {
+	return func(o *Option) {
+		o.grpcOpt = append(o.grpcOpt, opts...)
 	}
-
-	regexCache.Store(pattern, re)
-	return re.Match(value)
 }
