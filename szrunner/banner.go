@@ -1,4 +1,4 @@
-// Copyright 2025 Duc-Hung Ho.
+// Copyright 2026 Duc-Hung Ho.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,4 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package clickhouse
+package szrunner
+
+import (
+	"strings"
+
+	"github.com/sentinez/core/internal/console"
+	typepb "github.com/sentinez/sentinez/api/proto/sentinez/types/v1"
+)
+
+// Banner returns the ASCII banner of the service described by meta.
+func Banner(meta *typepb.XMeta) string {
+	service := strings.Replace(meta.GetServiceName(), "_", " // ", 1)
+	return console.GenFigure(service, meta.GetServiceKey())
+}
